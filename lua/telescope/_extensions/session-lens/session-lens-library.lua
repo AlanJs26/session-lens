@@ -83,6 +83,8 @@ function Lib.make_entry.gen_from_file(opts)
       cwd = root,
       display = function(_)
         local out = AutoSessionLib.unescape_dir(line):match("(.+)%.vim")
+        out = out:gsub('%%', '/'):gsub('++', ':/'):gsub('%.\\/', '')
+
         if opts.path_display and vim.tbl_contains(opts.path_display, "shorten") then
           out = path:new(out):shorten()
         end
