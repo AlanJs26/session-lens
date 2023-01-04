@@ -76,6 +76,20 @@ end
 function Lib.make_entry.gen_from_file(opts)
   local root = AutoSession.get_root_dir()
   return function(line)
+
+
+    local file_path = opts.cwd..line
+
+    modification_timestamp = vim.fn.getftime(file_path)
+    local score = file_path
+
+    if modification_timestamp ~= -1 then
+      timestamp = vim.fn.strftime("%s")-vim.fn.getftime(file_path)
+      score = (timestamp/100)
+    end
+
+    print(score)
+
     return {
       ordinal = line,
       value = line,

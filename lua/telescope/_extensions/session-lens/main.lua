@@ -23,6 +23,64 @@ end
 local themes = require('telescope.themes')
 local actions = require('telescope.actions')
 
+local sorters = require("telescope.sorters")
+
+local modification_date_sorter = function(cwd)
+
+  return function(opts)
+    opts = opts or {}
+    local fzy = opts.fzy_mod or require "telescope.algos.fzy"
+    local OFFSET = -fzy.get_score_floor()
+
+    return sorters.Sorter:new {
+      discard = true,
+
+      scoring_function = function(_, prompt, line)
+        local file_path = cwd..line
+
+        modification_timestamp = vim.fn.getftime(file_path)
+        local score = 1
+
+        if modification_timestamp ~= -1 then
+          timestamp = vim.fn.strftime("%s")-vim.fn.getftime(file_path)
+          score = timestamp
+        end
+
+        -- Check for actual matches before running the scoring alogrithm.
+        if not fzy.has_match(prompt, line) then
+          return -1
+        end
+
+        local fzy_score = fzy.score(prompt, line)
+
+        -- The fzy score is -inf for empty queries and overlong strings.  Since
+        -- this function converts all scores into the range (0, 1), we can
+        -- convert these to 1 as a suitable "worst score" value.
+        if fzy_score == fzy.get_score_min() then
+          return score
+        end
+
+        -- Poor non-empty matches can also have negative values. Offset the score
+        -- so that all values are positive, then invert to match the
+        -- telescope.Sorter "smaller is better" convention. Note that for exact
+        -- matches, fzy returns +inf, which when inverted becomes 0.
+        score = (1 / (fzy_score + OFFSET))
+
+      end,
+
+      -- The fzy.positions function, which returns an array of string indices, is
+      -- compatible with telescope's conventions. It's moderately wasteful to
+      -- call call fzy.score(x,y) followed by fzy.positions(x,y): both call the
+      -- fzy.compute function, which does all the work. But, this doesn't affect
+      -- perceived performance.
+      highlighter = function(_, prompt, display)
+        return fzy.positions(prompt, display)
+      end,
+    }
+  end
+end
+
+
 SessionLens.search_session = function(custom_opts)
   custom_opts = (Lib.isEmptyTable(custom_opts) or custom_opts == nil) and SessionLens.conf or custom_opts
 
@@ -57,12 +115,12 @@ SessionLens.search_session = function(custom_opts)
   if custom_opts.previewer ~= false and custom_opts.previewer == true then
     custom_opts["previewer"] = nil
   end
+  custom_opts["cwd"] = cwd
 
   local opts = {
     prompt_title = 'Sessions',
     entry_maker = Lib.make_entry.gen_from_file(custom_opts),
     cwd = cwd,
-    -- TOOD: support custom mappings?
     attach_mappings = function(_, map)
       actions.select_default:replace(SessionLensActions.source_session)
       map("i", "<c-d>", SessionLensActions.delete_session)
@@ -71,7 +129,13 @@ SessionLens.search_session = function(custom_opts)
   }
 
   local find_files_conf = vim.tbl_deep_extend("force", opts, theme_opts, custom_opts or {})
+
+  local teleconf = require("telescope.config").values
+  default_sorter = teleconf.file_sorter
+
+  teleconf.file_sorter = modification_date_sorter(cwd)
   require("telescope.builtin").find_files(find_files_conf)
+  teleconf.file_sorter = default_sorter
 end
 
 return SessionLens
