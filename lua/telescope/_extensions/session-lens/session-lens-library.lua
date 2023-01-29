@@ -1,6 +1,7 @@
 local path = require('plenary.path')
 local AutoSession = require('auto-session')
 local AutoSessionLib = require('auto-session-library')
+local entry_display = require("telescope.pickers.entry_display")
 
 local Config = {}
 local Lib = {
@@ -75,6 +76,8 @@ end
 -- ==================== SessionLens ==========================
 function Lib.make_entry.gen_from_file(opts)
   local root = AutoSession.get_root_dir()
+
+
   return function(line)
 
 
@@ -96,6 +99,9 @@ function Lib.make_entry.gen_from_file(opts)
       filename = line,
       cwd = root,
       display = function(_)
+
+
+
         local new_line = line
 
         local out = AutoSessionLib.unescape_dir(line):match("(.+)%.vim")
@@ -114,7 +120,19 @@ function Lib.make_entry.gen_from_file(opts)
           table.insert(words,word)
         end
 
-        return words[#words]
+        local displayer = entry_display.create({
+          separator = " ",
+          items = {
+            {
+              width = 20,
+            },
+            {
+              remaining = true,
+            },
+          },
+        })
+
+        return displayer({words[#words], {new_line, "Comment"}})
       end,
       path = path:new(root, line):absolute()
     }

@@ -1,6 +1,7 @@
 local Lib = require('telescope._extensions.session-lens.session-lens-library')
 local AutoSession = require('auto-session')
 local SessionLensActions = require("telescope._extensions.session-lens.session-lens-actions")
+local telescope_config = require("telescope.config").values
 
 ----------- Setup ----------
 local SessionLens = {
@@ -121,6 +122,11 @@ SessionLens.search_session = function(custom_opts)
     prompt_title = 'Sessions',
     entry_maker = Lib.make_entry.gen_from_file(custom_opts),
     cwd = cwd,
+    sorter = telescope_config.generic_sorter(),
+    layout_config = {
+      height = 0.55,
+      width = 0.7
+    },
     attach_mappings = function(_, map)
       actions.select_default:replace(SessionLensActions.source_session)
       map("i", "<c-d>", SessionLensActions.delete_session)
@@ -128,7 +134,7 @@ SessionLens.search_session = function(custom_opts)
     end,
   }
 
-  local find_files_conf = vim.tbl_deep_extend("force", opts, theme_opts, custom_opts or {})
+  local find_files_conf = vim.tbl_deep_extend("force", theme_opts, opts, custom_opts or {})
 
   local teleconf = require("telescope.config").values
   default_sorter = teleconf.file_sorter
