@@ -96,14 +96,25 @@ function Lib.make_entry.gen_from_file(opts)
       filename = line,
       cwd = root,
       display = function(_)
+        local new_line = line
+
         local out = AutoSessionLib.unescape_dir(line):match("(.+)%.vim")
         out = out:gsub('%%', '/'):gsub('++', ':/'):gsub('%.\\/', '')
 
         if opts.path_display and vim.tbl_contains(opts.path_display, "shorten") then
           out = path:new(out):shorten()
         end
-        if out then return out end
-        return line
+
+        if out then
+          new_line = out
+        end
+
+        local words = {}
+        for word in string.gmatch(new_line, '([^%/]+)') do
+          table.insert(words,word)
+        end
+
+        return words[#words]
       end,
       path = path:new(root, line):absolute()
     }
