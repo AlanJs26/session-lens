@@ -37,19 +37,22 @@ local modification_date_sorter = function(cwd)
       discard = true,
 
       scoring_function = function(_, prompt, line)
-        local file_path = cwd..line
-
-        modification_timestamp = vim.fn.getftime(file_path)
-        local score = 1
-
-        if modification_timestamp ~= -1 then
-          timestamp = vim.fn.strftime("%s")-vim.fn.getftime(file_path)
-          score = timestamp
-        end
 
         -- Check for actual matches before running the scoring alogrithm.
         if not fzy.has_match(prompt, line) then
           return -1
+        end
+
+
+        local file_path = cwd..line
+
+        local score = 1
+
+        modification_timestamp = vim.fn.getftime(file_path)
+
+        if modification_timestamp ~= -1 and prompt == '' then
+          timestamp = vim.fn.strftime("%s")-vim.fn.getftime(file_path)
+          score = timestamp
         end
 
         local fzy_score = fzy.score(prompt, line)
@@ -66,6 +69,8 @@ local modification_date_sorter = function(cwd)
         -- telescope.Sorter "smaller is better" convention. Note that for exact
         -- matches, fzy returns +inf, which when inverted becomes 0.
         score = (1 / (fzy_score + OFFSET))
+
+        return score
 
       end,
 
@@ -122,7 +127,7 @@ SessionLens.search_session = function(custom_opts)
     prompt_title = 'Sessions',
     entry_maker = Lib.make_entry.gen_from_file(custom_opts),
     cwd = cwd,
-    sorter = telescope_config.generic_sorter(),
+    -- sorter = telescope_config.generic_sorter(),
     layout_config = {
       height = 0.55,
       width = 0.7
